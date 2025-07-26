@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>כניסה למערכת SketchData</title>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      direction: rtl;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background Animation */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      animation: float 20s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { 
+        transform: translateY(0px); 
+      }
+      50% { 
+        transform: translateY(-20px); 
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { 
+        transform: translateX(0); 
+      }
+      25% { 
+        transform: translateX(-5px); 
+      }
+      75% { 
+        transform: translateX(5px); 
+      }
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      position: relative;
+      animation: slideIn 0.8s ease-out;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      animation: slideIn 0.8s ease-out;
+    }
+
+    .logo-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 900;
+      font-family: 'Arial Black', Arial, sans-serif;
+      letter-spacing: -0.12em;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .logo-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-divider {
+      color: #e2e8f0;
+      font-size: 2rem;
+      font-weight: 300;
+    }
+
+    .logo-name {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .title {
+      color: #334155;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 30px;
+      font-weight: 400;
+    }
+
+    .form-group {
+      position: relative;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 15px 50px 15px 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: rgba(248, 250, 252, 0.8);
+      direction: rtl;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .form-group .icon {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 18px;
+      transition: color 0.3s ease;
+      pointer-events: none;
+    }
+
+    .form-group input:focus + .icon {
+      color: #667eea;
+    }
+
+    .password-toggle {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 16px;
+      transition: color 0.3s ease;
+      padding: 5px;
+    }
+
+    .password-toggle:hover {
+      color: #667eea;
+    }
+
+    /* Auth Tabs */
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 25px;
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 12px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #64748b;
+    }
+
+    .auth-tab.active {
+      background: white;
+      color: #667eea;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .auth-tab:hover:not(.active) {
+      color: #475569;
+    }
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s ease-in-out infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      to { 
+        transform: rotate(360deg); 
+      }
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 14px;
+      display: none;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      animation: shake 0.5s ease-in-out;
+    }
+
+    .success-message {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 14px;
+      display: none;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .forgot-password {
+      color: #667eea;
+      text-decoration: none;
+      font-size: 14px;
+      margin-top: 15px;
+      display: inline-block;
+      transition: color 0.3s ease;
+    }
+
+    .forgot-password:hover {
+      color: #5b6ad6;
+      text-decoration: underline;
+    }
+
+    .footer {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 480px) {
+      .login-container {
+        margin: 20px;
+        padding: 30px 25px;
+      }
+      
+      .title {
+        font-size: 24px;
+      }
+      
+      .subtitle {
+        font-size: 14px;
+      }
+    }
+
+    /* Remember me checkbox */
+    .remember-me {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin: 15px 0;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .remember-me input[type="checkbox"] {
+      margin-left: 8px;
+      transform: scale(1.1);
+    }
+
+    /* Additional animations */
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    /* Additional animations */
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo-container">
+      <div class="logo-icon">SD</div>
+      <div class="logo-text">
+        <span class="logo-divider">|</span>
+        <span class="logo-name">SketchData</span>
+      </div>
+    </div>
+    
+    <!-- טאבים להתחברות/הרשמה -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthMode('login')" id="loginTab">
+        התחברות
+      </button>
+      <button class="auth-tab" onclick="switchAuthMode('register')" id="registerTab">
+        הרשמה
+      </button>
+    </div>
+    
+    <h1 class="title" id="authTitle">התחברות למערכת</h1>
+    <p class="subtitle">מערכת חילוץ נתונים מקבצי PDF</p>
+    
+    <form id="authForm">
+      <!-- שדות התחברות -->
+      <div class="login-fields">
+        <div class="form-group">
+          <input type="email" id="email" placeholder="כתובת דוא״ל" required>
+          <i class="fas fa-envelope icon"></i>
+        </div>
+        
+        <div class="form-group">
+          <input type="password" id="password" placeholder="סיסמה" required>
+          <i class="fas fa-lock icon"></i>
+          <button type="button" class="password-toggle" onclick="togglePassword('password')">
+            <i class="fas fa-eye" id="toggleIcon"></i>
+          </button>
+        </div>
+        
+        <div class="remember-me">
+          <input type="checkbox" id="rememberMe">
+          <label for="rememberMe">זכור אותי</label>
+        </div>
+      </div>
+      
+      <!-- שדות הרשמה נוספים -->
+      <div class="register-fields" style="display: none;">
+        <div class="form-group">
+          <input type="text" id="fullName" placeholder="שם מלא">
+          <i class="fas fa-user icon"></i>
+        </div>
+        
+        <div class="form-group">
+          <input type="password" id="confirmPassword" placeholder="אימות סיסמה">
+          <i class="fas fa-lock icon"></i>
+          <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">
+            <i class="fas fa-eye" id="confirmToggleIcon"></i>
+          </button>
+        </div>
+        
+        <div class="form-group">
+          <input type="text" id="company" placeholder="שם החברה (אופציונלי)">
+          <i class="fas fa-building icon"></i>
+        </div>
+        
+        <div class="terms-agreement">
+          <input type="checkbox" id="agreeTerms">
+          <label for="agreeTerms">אני מסכים ל<a href="#" onclick="showTerms()">תנאי השימוש</a> ו<a href="#" onclick="showPrivacy()">מדיניות הפרטיות</a></label>
+        </div>
+      </div>
+      
+      <button type="submit" class="auth-btn" id="authBtn">
+        <span id="btnText">התחבר למערכת</span>
+        <div class="loading-spinner" id="loadingSpinner"></div>
+      </button>
+      
+      <div class="error-message" id="errorMessage"></div>
+      <div class="success-message" id="successMessage"></div>
+      
+      <div class="auth-links">
+        <a href="#" class="forgot-password" onclick="showForgotPassword()" id="forgotLink">שכחת סיסמה?</a>
+        <span class="auth-switch" id="authSwitchText">
+          אין לך חשבון? 
+          <a href="#" onclick="switchAuthMode('register')" id="switchLink">הירשם כאן</a>
+        </span>
+      </div>
+    </form>
+    
+    <div class="footer">
+      © 2024 SketchData - כל הזכויות שמורות
+    </div>
+  </div>
+
+  <script>
+    // הגדרת Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAnkPF2y7uZfLRw98d_V4AM5RiBQPqO6GM",
+      authDomain: "sketchdata-f58f1.firebaseapp.com",
+      projectId: "sketchdata-f58f1",
+      storageBucket: "sketchdata-f58f1.appspot.com",
+      messagingSenderId: "92592930827",
+      appId: "1:92592930827:web:d93a0fcfaa5a9ee8f9b12e"
+    };
+
+    // אתחול Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // בדיקת מצב התחברות קיים
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        // המשתמש כבר מחובר - העבר לעמוד הראשי
+        window.location.href = "pdf-extractor.html";
+      }
+    });
+
+    // טעינת נתונים שמורים
+    window.addEventListener('DOMContentLoaded', function() {
+      const savedEmail = localStorage.getItem('rememberedEmail');
+      if (savedEmail) {
+        document.getElementById('email').value = savedEmail;
+        document.getElementById('rememberMe').checked = true;
+      }
+    });
+
+    // משתנה גלובלי למעקב אחר מצב ההזדהות
+    let currentAuthMode = 'login';
+
+    // פונקציית מעבר בין התחברות להרשמה
+    function switchAuthMode(mode) {
+      currentAuthMode = mode;
+      
+      const loginTab = document.getElementById('loginTab');
+      const registerTab = document.getElementById('registerTab');
+      const authTitle = document.getElementById('authTitle');
+      const btnText = document.getElementById('btnText');
+      const authSwitchText = document.getElementById('authSwitchText');
+      const switchLink = document.getElementById('switchLink');
+      const forgotLink = document.getElementById('forgotLink');
+      
+      const loginFields = document.querySelector('.login-fields');
+      const registerFields = document.querySelector('.register-fields');
+      
+      hideMessages();
+      
+      if (mode === 'register') {
+        // מעבר למצב הרשמה
+        loginTab.classList.remove('active');
+        registerTab.classList.add('active');
+        authTitle.textContent = 'הרשמה למערכת';
+        btnText.textContent = 'הירשם למערכת';
+        authSwitchText.innerHTML = 'יש לך כבר חשבון? <a href="#" onclick="switchAuthMode(\'login\')" id="switchLink">התחבר כאן</a>';
+        forgotLink.style.display = 'none';
+        
+        // הצגת שדות הרשמה
+        registerFields.style.display = 'block';
+        registerFields.classList.add('fade-in');
+        
+        // הוספת required לשדות הרשמה
+        document.getElementById('fullName').required = true;
+        document.getElementById('confirmPassword').required = true;
+        document.getElementById('agreeTerms').required = true;
+        
+      } else {
+        // מעבר למצב התחברות
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+        authTitle.textContent = 'התחברות למערכת';
+        btnText.textContent = 'התחבר למערכת';
+        authSwitchText.innerHTML = 'אין לך חשבון? <a href="#" onclick="switchAuthMode(\'register\')" id="switchLink">הירשם כאן</a>';
+        forgotLink.style.display = 'inline-block';
+        
+        // הסתרת שדות הרשמה
+        registerFields.style.display = 'none';
+        
+        // הסרת required משדות הרשמה
+        document.getElementById('fullName').required = false;
+        document.getElementById('confirmPassword').required = false;
+        document.getElementById('agreeTerms').required = false;
+      }
+      
+      // איפוס הטופס
+      document.getElementById('authForm').reset();
+      setLoadingState(false);
+    }
+
+    // פונקציית הצגה/הסתרה של סיסמה משופרת
+    function togglePassword(fieldId) {
+      const passwordInput = document.getElementById(fieldId);
+      const toggleIcon = document.getElementById(fieldId === 'password' ? 'toggleIcon' : 'confirmToggleIcon');
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash';
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.className = 'fas fa-eye';
+      }
+    }
+
+    // פונקציית הרשמה
+    function registerUser(email, password, fullName, company) {
+      return auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          // עדכון פרופיל המשתמש
+          return userCredential.user.updateProfile({
+            displayName: fullName
+          }).then(() => {
+            // אפשר להוסיף כאן שמירת מידע נוסף ב-Firestore
+            showSuccess('הרשמה בוצעה בהצלחה! מעביר לעמוד הראשי...');
+            
+            setTimeout(() => {
+              window.location.href = "pdf-extractor.html";
+            }, 1500);
+          });
+        });
+    }
+
+    // בדיקת תקינות סיסמה
+    function validatePassword(password) {
+      const minLength = 6;
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasNumber = /\d/.test(password);
+      
+      if (password.length < minLength) {
+        return 'הסיסמה חייבת להכיל לפחות 6 תווים';
+      }
+      
+      if (!hasNumber) {
+        return 'הסיסמה חייבת להכיל לפחות ספרה אחת';
+      }
+      
+      return null; // תקין
+    }
+
+    // בדיקת תקינות אימייל
+    function validateEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return 'כתובת דוא״ל לא תקינה';
+      }
+      return null;
+    }
+
+    // פונקציות הצגת תנאים ופרטיות
+    function showTerms() {
+      alert('תנאי השימוש:\n\n1. השימוש במערכת מיועד לחילוץ נתונים ממסמכי PDF בלבד\n2. אסור להעלות מסמכים המכילים מידע רגיש או סודי\n3. המערכת שומרת את הנתונים המעובדים לתקופה מוגבלת\n4. השימוש במערכת הוא על אחריות המשתמש בלבד');
+    }
+
+    function showPrivacy() {
+      alert('מדיניות פרטיות:\n\n1. אנחנו שומרים רק את המידע הנדרש לתפעול המערכת\n2. קבצי PDF נמחקים אוטומטית לאחר עיבוד\n3. לא נשתף מידע אישי עם צדדים שלישיים\n4. ניתן לבקש מחיקת חשבון בכל עת');
+    }
+
+    // פונקציית הצגת הודעת שגיאה
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      errorDiv.style.animation = 'shake 0.5s ease-in-out';
+      
+      setTimeout(() => {
+        errorDiv.style.animation = '';
+      }, 500);
+    }
+
+    // פונקציית הצגת הודעת הצלחה
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.style.display = 'none';
+    }
+
+    // פונקציית הסתרת הודעות
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+
+    // פונקציית שינוי מצב טעינה
+    function setLoadingState(isLoading) {
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('loadingSpinner');
+      
+      if (isLoading) {
+        btn.disabled = true;
+        btnText.textContent = 'מתחבר...';
+        spinner.style.display = 'inline-block';
+      } else {
+        btn.disabled = false;
+        btnText.textContent = 'התחבר למערכת';
+        spinner.style.display = 'none';
+      }
+    }
+
+    // פונקציית שכחת סיסמה
+    function showForgotPassword() {
+      const email = document.getElementById('email').value;
+      
+      if (!email) {
+        showError('אנא הכנס כתובת דוא״ל תחילה');
+        return;
+      }
+      
+      if (confirm('האם לשלוח קישור איפוס סיסמה לכתובת: ' + email + '?')) {
+        setLoadingState(true);
+        
+        auth.sendPasswordResetEmail(email)
+          .then(() => {
+            showSuccess('קישור איפוס סיסמה נשלח לכתובת הדוא״ל שלך');
+            setLoadingState(false);
+          })
+          .catch((error) => {
+            showError('שגיאה בשליחת איפוס סיסמה: ' + getErrorMessage(error.code));
+            setLoadingState(false);
+          });
+      }
+    }
+
+    // פונקציית תרגום הודעות שגיאה
+    function getErrorMessage(errorCode) {
+      const errorMessages = {
+        'auth/invalid-email': 'כתובת דוא״ל לא תקינה',
+        'auth/user-disabled': 'חשבון המשתמש הושבת',
+        'auth/user-not-found': 'משתמש לא נמצא במערכת',
+        'auth/wrong-password': 'סיסמה שגויה',
+        'auth/invalid-credential': 'פרטי התחברות שגויים',
+        'auth/too-many-requests': 'יותר מדי ניסיונות התחברות. נסה שוב מאוחר יותר',
+        'auth/network-request-failed': 'שגיאת רשת. בדוק את החיבור לאינטרנט',
+        'auth/weak-password': 'הסיסמה חלשה מדי',
+        'auth/email-already-in-use': 'כתובת הדוא״ל כבר רגושמת במערכת'
+      };
+      
+      return errorMessages[errorCode] || 'שגיאה לא ידועה';
+    }
+
+    // פונקציית התחברות/הרשמה מאוחדת
+    document.getElementById('authForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      
+      hideMessages();
+      
+      // בדיקות בסיסיות
+      if (!email || !password) {
+        showError('אנא מלא את כל השדות הנדרשים');
+        return;
+      }
+      
+      // בדיקת תקינות אימייל
+      const emailError = validateEmail(email);
+      if (emailError) {
+        showError(emailError);
+        return;
+      }
+      
+      if (currentAuthMode === 'login') {
+        // מצב התחברות
+        const rememberMe = document.getElementById('rememberMe').checked;
+        
+        if (password.length < 6) {
+          showError('הסיסמה חייבת להכיל לפחות 6 תווים');
+          return;
+        }
+        
+        setLoadingState(true);
+        
+        auth.signInWithEmailAndPassword(email, password)
+          .then((userCredential) => {
+            if (rememberMe) {
+              localStorage.setItem('rememberedEmail', email);
+            } else {
+              localStorage.removeItem('rememberedEmail');
+            }
+            
+            showSuccess('התחברות בוצעה בהצלחה! מעביר לעמוד הראשי...');
+            
+            setTimeout(() => {
+              window.location.href = "pdf-extractor.html";
+            }, 1500);
+          })
+          .catch((error) => {
+            setLoadingState(false);
+            showError(getErrorMessage(error.code));
+            console.error('Login error:', error);
+          });
+          
+      } else {
+        // מצב הרשמה
+        const fullName = document.getElementById('fullName').value.trim();
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const company = document.getElementById('company').value.trim();
+        const agreeTerms = document.getElementById('agreeTerms').checked;
+        
+        // בדיקות נוספות להרשמה
+        if (!fullName) {
+          showError('אנא הכנס שם מלא');
+          return;
+        }
+        
+        if (fullName.length < 2) {
+          showError('שם מלא חייב להכיל לפחות 2 תווים');
+          return;
+        }
+        
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          showError(passwordError);
+          return;
+        }
+        
+        if (password !== confirmPassword) {
+          showError('הסיסמאות אינן תואמות');
+          return;
+        }
+        
+        if (!agreeTerms) {
+          showError('חייב לאשר את תנאי השימוש');
+          return;
+        }
+        
+        setLoadingState(true);
+        
+        registerUser(email, password, fullName, company)
+          .catch((error) => {
+            setLoadingState(false);
+            showError(getErrorMessage(error.code));
+            console.error('Registration error:', error);
+          });
+      }
+    });
+
+    // הוספת אפקטים נוספים
+    document.addEventListener('DOMContentLoaded', function() {
+      // אנימציה של הלוגו
+      const logo = document.querySelector('.logo');
+      if (logo) {
+        logo.classList.add('pulse');
+      }
+      
+      // פוקוס אוטומטי על שדה הדוא״ל
+      const emailInput = document.getElementById('email');
+      if (emailInput && !emailInput.value) {
+        emailInput.focus();
+      }
+    });
+
+    // הוספת keyboard shortcuts
+    document.addEventListener('keydown', function(event) {
+      // Enter במקום כפתור התחברות
+      if (event.key === 'Enter' && event.target.tagName !== 'BUTTON') {
+        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+      }
+    });
+  </script>
+</body>
+</html>
