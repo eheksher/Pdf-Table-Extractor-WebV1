@@ -496,9 +496,23 @@
     // טעינת נתונים שמורים
     window.addEventListener('DOMContentLoaded', function() {
       const savedEmail = localStorage.getItem('rememberedEmail');
-      if (savedEmail) {
-        document.getElementById('email').value = savedEmail;
-        document.getElementById('rememberMe').checked = true;
+      const emailInput = document.getElementById('email');
+      const rememberCheckbox = document.getElementById('rememberMe');
+      
+      if (savedEmail && emailInput && rememberCheckbox) {
+        emailInput.value = savedEmail;
+        rememberCheckbox.checked = true;
+      }
+      
+      // פוקוס אוטומטי על שדה הדוא״ל
+      if (emailInput && !emailInput.value) {
+        emailInput.focus();
+      }
+      
+      // אנימציה של הלוגו
+      const logoIcon = document.querySelector('.logo-icon');
+      if (logoIcon) {
+        logoIcon.classList.add('pulse');
       }
     });
 
@@ -660,17 +674,23 @@
 
     // פונקציית שינוי מצב טעינה
     function setLoadingState(isLoading) {
-      const btn = document.getElementById('loginBtn');
+      const btn = document.getElementById('authBtn');
       const btnText = document.getElementById('btnText');
       const spinner = document.getElementById('loadingSpinner');
       
+      // בדיקה שהאלמנטים קיימים לפני ניסיון גישה
+      if (!btn || !btnText || !spinner) {
+        console.warn('Loading state elements not found');
+        return;
+      }
+      
       if (isLoading) {
         btn.disabled = true;
-        btnText.textContent = 'מתחבר...';
+        btnText.textContent = currentAuthMode === 'login' ? 'מתחבר...' : 'נרשם...';
         spinner.style.display = 'inline-block';
       } else {
         btn.disabled = false;
-        btnText.textContent = 'התחבר למערכת';
+        btnText.textContent = currentAuthMode === 'login' ? 'התחבר למערכת' : 'הירשם למערכת';
         spinner.style.display = 'none';
       }
     }
@@ -816,17 +836,18 @@
 
     // הוספת אפקטים נוספים
     document.addEventListener('DOMContentLoaded', function() {
-      // אנימציה של הלוגו
-      const logo = document.querySelector('.logo');
-      if (logo) {
-        logo.classList.add('pulse');
+      console.log('DOM Content Loaded - Auth page initialized');
+      
+      // בדיקה שכל האלמנטים הנדרשים קיימים
+      const requiredElements = ['email', 'password', 'authBtn', 'btnText', 'loadingSpinner'];
+      const missingElements = requiredElements.filter(id => !document.getElementById(id));
+      
+      if (missingElements.length > 0) {
+        console.error('Missing required elements:', missingElements);
+        return;
       }
       
-      // פוקוס אוטומטי על שדה הדוא״ל
-      const emailInput = document.getElementById('email');
-      if (emailInput && !emailInput.value) {
-        emailInput.focus();
-      }
+      console.log('All required elements found - page ready');
     });
 
     // הוספת keyboard shortcuts
