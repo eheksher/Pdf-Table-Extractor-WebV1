@@ -485,13 +485,7 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    // בדיקת מצב התחברות קיים
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        // המשתמש כבר מחובר - העבר לעמוד הראשי
-        window.location.href = "pdf-extractor.html";
-      }
-    });
+    // הסרנו את הבדיקה האוטומטית - המשתמש צריך להתחבר ידנית
 
     // טעינת נתונים שמורים
     window.addEventListener('DOMContentLoaded', function() {
@@ -854,7 +848,10 @@
     document.addEventListener('keydown', function(event) {
       // Enter במקום כפתור התחברות
       if (event.key === 'Enter' && event.target.tagName !== 'BUTTON') {
-        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+        const authForm = document.getElementById('authForm');
+        if (authForm) {
+          authForm.dispatchEvent(new Event('submit'));
+        }
       }
     });
   </script>
