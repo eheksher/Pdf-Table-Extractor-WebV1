@@ -1669,13 +1669,40 @@ function renderPage() {
   });
 }
 
-function viewFile(fileIndex) {
+function viewFile(fileIndex, event) {
+  // מניעת קפיצה לראש הדף
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
   if (fileIndex >= 0 && fileIndex < files.length) {
+    // שמירת מיקום הגלילה של הטבלה
+    const tableContainer = document.querySelector('.table-container');
+    let tableScrollTop = 0;
+    let tableScrollLeft = 0;
+    
+    if (tableContainer) {
+      tableScrollTop = tableContainer.scrollTop;
+      tableScrollLeft = tableContainer.scrollLeft;
+    }
+    
     currentFileIndex = fileIndex;
     loadPdf(files[fileIndex]);
+    
+    // עדכון הטבלה
     renderTable();
     
-    // עדכון כותרת החלון הצף אם הוא פתוח
+    // החזרת מיקום הגלילה של הטבלה אחרי שהיא נבנית מחדש
+    setTimeout(function() {
+      const newTableContainer = document.querySelector('.table-container');
+      if (newTableContainer) {
+        newTableContainer.scrollTop = tableScrollTop;
+        newTableContainer.scrollLeft = tableScrollLeft;
+      }
+    }, 0);
+    
+    // עדכון החלון הצף אם הוא פתוח
     const floatingWindow = document.getElementById('floatingPdfWindow');
     if (floatingWindow && floatingWindow.style.display !== 'none') {
       const titleElement = floatingWindow.querySelector('.floating-window-title span');
@@ -1688,6 +1715,8 @@ function viewFile(fileIndex) {
       }, 500);
     }
   }
+  
+  return false;
 }
 
 // PDF Navigation - עדכון לסנכרון עם החלון הצף
