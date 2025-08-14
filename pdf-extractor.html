@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>חילוץ נתונים מ-PDF - גרסה מעודכנת</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="css/pdf-extractor.css">
+  
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z5FQ8HN0XP"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Z5FQ8HN0XP');
+  </script>
+  
+  <!-- Custom Tooltip Styles -->
+  <style>
+    /* Custom Tooltips */
+    [title] {
+      position: relative;
+      cursor: help;
+    }
+    
+    [title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 9999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      opacity: 0;
+      animation: fadeInTooltip 0.2s ease-in-out forwards;
+      pointer-events: none;
+      max-width: 250px;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.4;
+    }
+    
+    [title]:hover::before {
+      content: '';
+      position: absolute;
+      bottom: 115%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #333;
+      z-index: 9999;
+      opacity: 0;
+      animation: fadeInTooltip 0.2s ease-in-out forwards;
+    }
+    
+    @keyframes fadeInTooltip {
+      from { opacity: 0; transform: translateX(-50%) translateY(5px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    
+    /* Special styling for different button types */
+    .office-btn[title]:hover::after {
+      bottom: 120%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .popup-btn[title]:hover::after {
+      bottom: 130%;
+      background: #444;
+    }
+    
+    /* Make sure tooltips appear above everything */
+    .ribbon [title]:hover::after,
+    .ribbon [title]:hover::before {
+      z-index: 10000;
+    }
+    
+    /* כפתור סיווגים - כתום */
+    .classification-feature {
+      background: linear-gradient(135deg, #fd7e14, #e8590c) !important;
+      color: white !important;
+      border: none !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .classification-feature:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 8px rgba(253, 126, 20, 0.3) !important;
+    }
+    
+    /* כפתור סיווג אוטומטי - ירוק */
+    .auto-classification-btn {
+      background: linear-gradient(135deg, #28a745, #20c997) !important;
+      color: white !important;
+      border: none !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .auto-classification-btn:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3) !important;
+    }
+    
+    /* popup סיווגים */
+    .classification-popup {
+      z-index: 10001 !important;
+    }
+    
+    /* סטיילים לכפתורים פשוטים */
+    .simple-feature {
+      background: linear-gradient(135deg, #17a2b8, #138496) !important;
+      color: white !important;
+      border: none !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .simple-feature:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3) !important;
+    }
+    
+    .simple-clear {
+      background: linear-gradient(135deg, #6c757d, #545b62) !important;
+      color: white !important;
+      border: none !important;
+    }
+    
+    .simple-clear:hover {
+      background: linear-gradient(135deg, #5a6268, #495057) !important;
+    }
+    
+    .simple-counter {
+      background: #f8f9fa !important;
+      border: 2px solid #dee2e6 !important;
+      border-radius: 4px !important;
+      padding: 8px 12px !important;
+      text-align: center !important;
+      min-width: 80px !important;
+    }
+    
+    .simple-counter .counter-label {
+      font-size: 11px !important;
+      color: #6c757d !important;
+      margin-bottom: 2px !important;
+    }
+    
+    .simple-counter .counter-value {
+      font-size: 18px !important;
+      font-weight: bold !important;
+      color: #495057 !important;
+    }
+    
+    .analysis-counter {
+      background: #e7f3ff !important;
+      border: 2px solid #0078d4 !important;
+      border-radius: 4px !important;
+      padding: 8px 12px !important;
+      text-align: center !important;
+      min-width: 80px !important;
+    }
+    
+    .analysis-counter .counter-label {
+      font-size: 11px !important;
+      color: #0078d4 !important;
+      margin-bottom: 2px !important;
+    }
+    
+    .analysis-counter .counter-value {
+      font-size: 18px !important;
+      font-weight: bold !important;
+      color: #0078d4 !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header עם לוגו וניווט -->
+  <header class="header" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100;">
+    <nav class="nav" style="max-width: 100%; margin: 0; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 70px;">
+      <div class="logo" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none;">
+        <div class="logo-icon" style="width: 50px; height: 50px; background: linear-gradient(135deg, #2563eb, #3b82f6); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem; font-weight: 900; font-family: 'Arial Black', Arial, sans-serif; letter-spacing: -0.12em; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">SD</div>
+        <div class="logo-text" style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="logo-divider" style="color: #e2e8f0; font-size: 1.8rem; font-weight: 300;">|</span>
+          <span class="logo-name" style="font-size: 1.8rem; font-weight: 700; color: #1e293b;">SketchData</span>
+        </div>
+      </div>
+      <div class="nav-controls">
+        <a href="index.html" class="btn-nav">חזרה לעמוד הבית</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="main-container">
+    
+    <!-- Office Style Ribbon -->
+    <div class="ribbon">
+      <div class="ribbon-tabs">
+        <button class="ribbon-tab active" onclick="switchTab('pdf')">
+          חילוץ נתונים מ-PDF
+        </button>
+        <button class="ribbon-tab" onclick="switchTab('table')">
+          ניהול טבלה
+        </button>
+        <button class="ribbon-tab" onclick="switchTab('analysis')">
+          ניתוח קבצים
+        </button>
+      </div>
+      
+      <!-- PDF Tab Content -->
+      <div id="pdf-tab" class="ribbon-content active">
+        <div class="button-group">
+          <button class="office-btn" onclick="document.getElementById('fileInput').click()" title="טען קבצי PDF חדשים (מחליף את הקבצים הקיימים)">
+            <div class="btn-text">העלאת קבצים</div>
+          </button>
+        </div>
+
+        <div class="button-group">
+          <button class="office-btn add-files-btn" onclick="document.getElementById('addFileInput').click()" title="הוסף קבצי PDF לרשימה הקיימת (ללא החלפה)">
+            <div class="btn-text">➕ הוספת קבצים</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn" onclick="extractAll()" title="חלץ נתונים מכל הקבצים לפי המיקומים שהוגדרו">
+            <div class="btn-text">חילוץ נתונים</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn" onclick="showTemplatePopup()" title="שמור או טען תבניות של מיקומי שדות">
+            <div class="btn-text">ניהול תבניות</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn" id="togglePdfBtn" onclick="togglePdfPanel()" title="הסתר/הצג את פאנל תצוגת ה-PDF">
+            <div class="btn-text">🗖 הסתר PDF</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn" id="openPdfBtn" onclick="openPdfInNewWindow()" title="פתח את ה-PDF בחלון צף נפרד">
+            <div class="btn-text">🗗 חלון נפרד</div>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Table Tab Content -->
+      <div id="table-tab" class="ribbon-content">
+        <div class="button-group">
+          <button class="office-btn" onclick="exportExcel()" title="ייצא את הנתונים לקובץ אקסל">
+            <div class="btn-text">ייצוא אקסל</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn" onclick="showColumnPopup()" title="הוסף עמודות מותאמות אישית לטבלה">
+            <div class="btn-text">הוספת עמודות</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn" onclick="showFilterPopup()" title="בחר אילו עמודות להציג או להסתיר">
+            <div class="btn-text">סינון עמודות</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn new-feature" onclick="selectAllRows()" title="בחר את כל השורות הגלויות בטבלה">
+            <div class="btn-text">בחר הכל</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn new-feature" onclick="clearAllSelections()" title="בטל את הבחירה מכל השורות">
+            <div class="btn-text">נקה בחירות</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn new-feature" onclick="deleteSelectedRows()" title="מחק את השורות שנבחרו מהטבלה">
+            <div class="btn-text">מחק נבחרות</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn new-feature" onclick="saveDataToStorage()" title="שמור את הנתונים באחסון המקומי של הדפדפן">
+            <div class="btn-text">שמור נתונים</div>
+          </button>
+        </div>
+        
+        <div class="button-group">
+          <button class="office-btn new-feature" onclick="clearStoredData()" title="מחק את כל הנתונים השמורים באחסון המקומי">
+            <div class="btn-text">נקה נתונים</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- *** טאב ניתוח קבצים - נקי עם כל הכפתורים *** -->
+      <div id="analysis-tab" class="ribbon-content">
+        
+        <!-- שליפת טקסטים -->
+        <div class="button-group">
+          <button class="office-btn simple-feature" onclick="extractAllTexts()" 
+                  title="שלוף את כל הטקסטים מהקבצים עם מיקום מדויק - חיוני לפני שאר הפעולות">
+            <div class="btn-text">📄<br>שלוף טקסטים</div>
+          </button>
+        </div>
+        
+        <!-- כפילות -->
+        <div class="button-group">
+          <button class="office-btn simple-feature" onclick="findTextDuplicates()" id="simpleDuplicateBtn"
+                  title="מצא קבצים עם טקסטים זהים (דמיון 98%+) וסמן אותם בטבלה">
+            <div class="btn-text">👥<br>כפילות טקסט</div>
+          </button>
+        </div>
+        
+        <!-- חיפוש -->
+        <div class="button-group">
+          <input type="text" id="simpleSearchInput" placeholder="חפש טקסט או רצף מילים..." 
+                 style="width: 140px; margin-bottom: 5px; padding: 4px; border: 1px solid #ccc; border-radius: 3px; direction: rtl; text-align: right;"
+                 onkeypress="if(event.key==='Enter') searchTexts()"
+                 title="הכנס טקסט לחיפוש - תומך ברצפי מילים צמודים כמו 'אלומין יון פרופיל'">
+          <button class="office-btn simple-feature" onclick="searchTexts()" id="simpleSearchBtn"
+                  title="חפש טקסט בכל הקבצים וסמן תוצאות - תומך בחיפוש רצפי מילים">
+            <div class="btn-text">🔍<br>חפש טקסט</div>
+          </button>
+        </div>
+        
+        <!-- ניקוי -->
+        <div class="button-group">
+          <button class="office-btn simple-clear" onclick="clearSimpleFilters()" 
+                  title="נקה את כל הסינונים והסימונים וחזור לתצוגה רגילה">
+            <div class="btn-text"><br>נקה סינונים</div>
+          </button>
+        </div>
+        
+        <!-- ניהול סיווגים -->
+        <div class="button-group">
+          <button class="office-btn classification-feature" onclick="showClassificationPopup()" 
+                  title="הגדר סיווגים מותאמים אישית - קבצי חומרים, סוגי מוצרים וכו'">
+            <div class="btn-text">🏷️<br>ניהול סיווגים</div>
+          </button>
+        </div>
+        
+        <!-- *** הוספת עמודת סיווג - הכפתור החסר הראשון *** -->
+        <div class="button-group">
+          <button class="office-btn" onclick="addClassificationColumnManually()" 
+                  title="הוסף עמודת סיווג לטבלה אם היא לא קיימת">
+            <div class="btn-text">➕<br>הוסף עמודת סיווג</div>
+          </button>
+        </div>
+        
+        <!-- *** סיווג אוטומטי - הכפתור החסר השני *** -->
+        <div class="button-group">
+          <button class="office-btn auto-classification-btn" onclick="runAutoClassification()" 
+                  title="סווג אוטומטית את כל הקבצים לפי הסיווגים שהוגדרו">
+            <div class="btn-text"><br>סיווג אוטומטי</div>
+          </button>
+        </div>
+        
+        <!-- מונה תוצאות -->
+        <div class="button-group">
+          <div class="simple-counter" title="מספר קבצים שנמצאו בסינון הנוכחי">
+            <div class="counter-label">תוצאות נמצאו</div>
+            <div class="counter-value" id="simpleResultsCount">0</div>
+          </div>
+        </div>
+        
+        <!-- מידע כללי -->
+        <div class="button-group">
+          <div class="analysis-counter" title="סה״כ קבצים שנטענו במערכת">
+            <div class="counter-label">סה״כ קבצים</div>
+            <div class="counter-value" id="totalFilesCount">0</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+
+    <!-- שורת חיפוש -->
+    <div class="search-toolbar" id="searchToolbar">
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="חפש בטבלה... (שם קובץ, מספר שרטוט, חומר וכו')" />
+        <button class="clear-search" onclick="clearSearch()" title="נקה את תוצאות החיפוש">✕ נקה</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-grid" id="contentGrid">
+      
+      <!-- Left Panel - Table -->
+      <div class="panel table-panel" id="tablePanel">
+        <div class="panel-header">
+          📊 טבלת נתונים
+        </div>
+        <div class="panel-content">
+          <div id="tableContainer">
+            <div class="empty-state">
+              <div class="empty-icon">📄</div>
+              <p>אנא העלה קבצי PDF כדי להתחיל</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel - PDF Viewer -->
+      <div class="panel pdf-panel" id="pdfPanel">
+        <div class="panel-header">
+          📄 תצוגת PDF והגדרת מיקומים
+        </div>
+        <div class="panel-content">
+          <!-- Field Selection Info -->
+          <div id="fieldInfo" class="field-info">
+            <h4 id="currentField">שדה נוכחי</h4>
+            <p>לחץ וגרור על ה-PDF כדי לבחור את האזור שבו נמצא השדה</p>
+            <button class="office-btn" id="saveBtn" onclick="savePosition()" disabled title="שמור את המיקום שנבחר עבור השדה הנוכחי">
+              <div class="btn-text">שמור מיקום</div>
+            </button>
+            <div id="textResult" style="display: none; margin-top: 8px; padding: 8px; background: #d4edda; border: 1px solid #107c10; border-radius: 2px; font-size: 12px;"></div>
+          </div>
+          
+          <!-- PDF Controls -->
+          <div class="pdf-controls">
+            <button onclick="prevPage()" title="עמוד קודם">◀</button>
+            <span>עמוד <span id="pageNum">1</span> מתוך <span id="totalPages">0</span></span>
+            <button onclick="nextPage()" title="עמוד הבא">▶</button>
+            <span style="margin: 0 8px;">|</span>
+            <button onclick="zoomOut()" title="הקטן תצוגה">🔍-</button>
+            <span id="zoom">100%</span>
+            <button onclick="zoomIn()" title="הגדל תצוגה">🔍+</button>
+          </div>
+          
+          <!-- PDF Container -->
+          <div class="pdf-container" id="pdfContainer">
+            <div class="empty-state">
+              <div class="empty-icon">📄</div>
+              <p>העלה קבצי PDF כדי להתחיל</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- כל ה-Popups הקיימים נשארים אותו דבר -->
+  
+  <!-- Template Management Popup -->
+  <div class="popup-overlay" id="templatePopup">
+    <div class="popup-window">
+      <div class="popup-header">
+        <div class="popup-title">ניהול תבניות</div>
+        <button class="popup-close" onclick="closeTemplatePopup()">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; display: block; margin-bottom: 4px;">שם תבנית חדשה:</label>
+          <div style="display: flex; gap: 4px;">
+            <input type="text" id="newTemplateName" style="flex: 1; padding: 4px; border: 1px solid #d2d0ce; border-radius: 2px; font-size: 12px;" placeholder="הכנס שם תבנית">
+            <button class="popup-btn" onclick="saveTemplate()" title="שמור תבנית חדשה עם המיקומים הנוכחיים">שמור</button>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #d2d0ce; padding-top: 12px;">
+          <label style="font-size: 12px; display: block; margin-bottom: 8px;">תבניות קיימות:</label>
+          <div id="templateList" style="max-height: 200px; overflow-y: auto;">
+            <!-- Templates will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Column Management Popup -->
+  <div class="popup-overlay" id="columnPopup">
+    <div class="popup-window">
+      <div class="popup-header">
+        <div class="popup-title">ניהול עמודות</div>
+        <button class="popup-close" onclick="closeColumnPopup()">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; display: block; margin-bottom: 4px;">הוסף עמודה חדשה:</label>
+          <div style="display: flex; gap: 4px;">
+            <input type="text" id="newColumnInput" style="flex: 1; padding: 4px; border: 1px solid #d2d0ce; border-radius: 2px; font-size: 12px;" placeholder="שם עמודה">
+            <button class="popup-btn" onclick="addCustomColumnFromPopup()" title="הוסף עמודה חדשה לטבלה">הוסף</button>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #d2d0ce; padding-top: 12px;">
+          <label style="font-size: 12px; display: block; margin-bottom: 8px;">עמודות מותאמות אישית:</label>
+          <div id="customColumnsList" style="max-height: 150px; overflow-y: auto;">
+            <!-- Custom columns will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Management Popup -->
+  <div class="popup-overlay" id="filterPopup">
+    <div class="popup-window">
+      <div class="popup-header">
+        <div class="popup-title">סינון עמודות</div>
+        <button class="popup-close" onclick="closeFilterPopup()">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 12px; display: block; margin-bottom: 6px;">בחר עמודות להצגה:</label>
+        </div>
+        <div id="filterColumnsList" class="filter-grid">
+          <!-- Filter checkboxes will be populated here -->
+        </div>
+      </div>
+      <div class="popup-footer">
+        <button class="popup-btn" onclick="selectAllColumns()" title="בחר את כל העמודות להצגה">בחר הכל</button>
+        <button class="popup-btn" onclick="clearAllColumns()" title="הסתר את כל העמודות (חוץ משם קובץ)">נקה הכל</button>
+        <button class="popup-btn" onclick="closeFilterPopup()" title="סגור חלון">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculator Modal -->
+  <div id="calculatorModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">מחשבון היקף</div>
+        <button class="modal-close" onclick="closeCalculator()" title="סגור מחשבון">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="calc-grid">
+          <div class="calc-field">
+            <label>אורך 1:</label>
+            <input type="number" class="calc-input" id="length1" placeholder="0">
+          </div>
+          <div class="calc-field">
+            <label>רוחב 1:</label>
+            <input type="number" class="calc-input" id="width1" placeholder="0">
+          </div>
+          <div class="calc-field">
+            <label>אורך 2:</label>
+            <input type="number" class="calc-input" id="length2" placeholder="0">
+          </div>
+          <div class="calc-field">
+            <label>רוחב 2:</label>
+            <input type="number" class="calc-input" id="width2" placeholder="0">
+          </div>
+          <div class="calc-field">
+            <label>אורך 3:</label>
+            <input type="number" class="calc-input" id="length3" placeholder="0">
+          </div>
+          <div class="calc-field">
+            <label>רוחב 3:</label>
+            <input type="number" class="calc-input" id="width3" placeholder="0">
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin: 16px 0;">
+          <button class="office-btn" onclick="calculatePerimeter()" title="חשב את היקף הכולל של כל המלבנים">
+            <div class="btn-text">חשב היקף</div>
+          </button>
+          <button class="office-btn" onclick="resetCalculator()" title="אפס את כל השדות">
+            <div class="btn-text">אפס</div>
+          </button>
+        </div>
+        
+        <div class="calc-result" id="calcResult">
+          היקף כולל: 0 ס"מ
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="office-btn" onclick="saveCalculatedPerimeter()" title="שמור את התוצאה המחושבת בטבלה">
+          <div class="btn-text">שמור ערך בטבלה</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- *** הסקריפטים *** -->
+  <script src="js/pdf-extractor.js"></script>
+  <script src="js/pdf-extractor_2.js"></script>
+  
+  <!-- Hidden file inputs -->
+  <input type="file" id="fileInput" multiple accept=".pdf" style="display: none !important; visibility: hidden !important; position: absolute !important; left: -9999px !important;">
+  <input type="file" id="addFileInput" multiple accept=".pdf" style="display: none !important; visibility: hidden !important; position: absolute !important; left: -9999px !important;">
+
+  <!-- פונקציות עזר נוספות -->
+  <script>
+    // עדכון מונה הקבצים הכללי
+    function updateAnalysisCounters() {
+      const totalCount = document.getElementById('totalFilesCount');
+      if (totalCount && typeof window.data !== 'undefined') {
+        totalCount.textContent = window.data.length.toString();
+      }
+    }
+
+    // הפעלה אוטומטית של עדכון המונים
+    setInterval(updateAnalysisCounters, 1000);
+    
+    // וידוא שהפונקציות זמינות גלובלית
+    window.updateAnalysisCounters = updateAnalysisCounters;
+  </script>
+
+</body>
+</html>
